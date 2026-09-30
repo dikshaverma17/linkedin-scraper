@@ -189,8 +189,8 @@ Example:
     "url": "https://www.linkedin.com/in/example/"
   }
 ]
-### 6. Full LinkedIn Profile Scraping
-
+##6. Full LinkedIn Profile Scraping
+```
 - Run `scraper_authenticated.py`.
 - The scraper:
   - Reads the selected LinkedIn URLs from `selected_urls.json`
@@ -282,21 +282,22 @@ playwright install
 ```
 
 ### 2. Environment Setup
-
+```
 Create a `.env` file in the project root:
 
 ```env
 # LLM Provider
 OPENAI_API_KEY=your_openai_api_key
-
+```
 # Scraper Credentials / Proxies (If Applicable)
 PROXY_SERVER=http://your-proxy-provider.com:8080
 PROXY_USERNAME=your_username
 PROXY_PASSWORD=your_password
 ```
-
+```
+```
 ### 3. Usage
-
+```
 Run the pipeline :
 
 --bash 
