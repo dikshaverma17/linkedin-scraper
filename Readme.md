@@ -3,20 +3,14 @@
 An intelligent, multi-agent web scraping and data enrichment engine designed to automate candidate profile discovery, document parsing, and structured data storage. The pipeline combines web scrapers, OCR, and LLM-driven structured extraction to build complete candidate profiles from LinkedIn, resumes, and portfolio links with high accuracy. 
 "THIS PIPELINE IS STILL IN BUILD PHASE."
 
-## 📌 Table of Contents
+🚧 Current Development Status
 
-- [Overview](#-overview)
-- [Architecture & Workflow](#-architecture--workflow)
-- [Key Features](#-key-features)
-- [Agent Breakdown](#-agent-breakdown)
-- [Tech Stack](#-tech-stack)
-- [Getting Started](#-getting-started)
-- [Configuration](#-configuration)
-- [Database Schema (Supabase)](#-database-schema-supabase)
-- [Troubleshooting & Challenges](#-troubleshooting--known-challenges)
-- [License](#-license)
+Note: The pipeline is currently in the build and testing phase.
 
----
+Agent 1: Search Agent is still under development. Some issues are currently being resolved in the candidate profile discovery and URL generation process.
+Profile Filtering Pipeline (Education Extraction → Education-Based Filtering) is implemented and functional.
+Full Profile Scraping & Data Extraction is implemented and functional.
+The complete end-to-end multi-agent workflow will be finalized once Agent 1 is stable and fully integrated.
 
 ## 🔍 Overview
 
@@ -125,35 +119,160 @@ Manual candidate sourcing across multiple platforms leads to fragmented data, mi
 
 | Component                    | Technology                                                                 |
 | ---------------------------- | -------------------------------------------------------------------------- |
-| **Core Runtime**             | Python 3.10+                                                               |
-| **Agent Framework / Orchestration** | LangChain / LangGraph (or Custom Python Async Pipeline)              |
+| **Core Runtime**             | Python 3.10+                                                               |              |
 | **Scraping & Automation**    | Playwright / Selenium / BeautifulSoup4                                     |
-| **PDF & Document Processing**| pdfplumber, PyMuPDF (fitz), python-docx, pytesseract                       |
+| **PDF & Document Processing**| pdfplumber, PyMuPDF (fitz)                     |
 | **Extraction & LLMs**        | OpenAI API (GPT-4o / GPT-4o-mini) with Pydantic validation                 |
-| **Database & Storage**       | Supabase (PostgreSQL)                                                      |
-| **Exporting**                | Pandas / CSV                                                               |
+| **Database & Storage**       | Supabase (PostgreSQL)                                                    |
+| **Exporting**                | Pandas / CSV / Json format                                                              |
 
 ---
 
+## 🔄 Project Workflow
+
+The project follows a two-stage pipeline:
+
+1. **Profile Filtering**
+2. **Full LinkedIn Profile Scraping & Data Extraction**
+
+### 1. Input LinkedIn URLs
+
+- Store the LinkedIn profile URLs in:
+  `linkedin_urls.json`
+- These URLs are used as the initial input for the pipeline.
+
+### 2. LinkedIn Authentication
+
+- Run `login_use.py`.
+- The script opens LinkedIn and authenticates the account.
+- After successful login, the browser session is saved in:
+  `storage_state.json`
+- This stored session is reused by the subsequent Playwright scripts.
+
+### 3. Education Extraction
+
+- Run `filter_education.py`.
+- The script:
+  - Reads URLs from `linkedin_urls.json`
+  - Uses the authenticated session from `storage_state.json`
+  - Opens each LinkedIn profile
+  - Extracts the Education section
+- The extracted education data is saved in:
+  `education_extracted.txt`
+
+### 4. Education-Based Profile Filtering
+
+- Filtering rules are defined in:
+  `filter_prompt.txt`
+- Run `main.py`.
+- The script:
+  - Reads `education_extracted.txt`
+  - Loads the filtering instructions from `filter_prompt.txt`
+  - Sends the profile data to Gemini
+  - Evaluates each profile against the required conditions
+- The complete filtering explanation and Gemini response are saved in:
+  `filter_results.txt`
+- Profiles that satisfy all filtering conditions are selected.
+- Their LinkedIn URLs are saved in:
+  `selected_urls.json`
+
+### 5. Selected URLs
+
+`selected_urls.json` contains only the profiles that passed the filtering stage.
+
+Example:
+
+```json
+[
+  {
+    "id": 1,
+    "url": "https://www.linkedin.com/in/example/"
+  }
+]
+### 6. Full LinkedIn Profile Scraping
+
+- Run `scraper_authenticated.py`.
+- The scraper:
+  - Reads the selected LinkedIn URLs from `selected_urls.json`
+  - Uses the authenticated session stored in `storage_state.json`
+  - Opens each selected LinkedIn profile
+  - Scrapes the complete LinkedIn profile data
+- The raw scraped profile data is saved in:
+  `linkedin_profile_data.txt`
+
+### 7. Raw Profile Data
+
+- `linkedin_profile_data.txt` contains the complete/raw information scraped from the selected LinkedIn profiles.
+- This file serves as the input for the final data extraction stage.
+- It contains the profile information required for extracting the final fields.
+
+### 8. Required Data Extraction
+
+- The required extraction rules are defined in:
+  `extraction_prompt.txt`
+- The extraction process:
+  - Reads the scraped profile data from `linkedin_profile_data.txt`
+  - Uses `extraction_prompt.txt` to identify the required information
+  - Extracts only the required fields from each profile
+- The final extracted information is saved in:
+  `extracted_profiles.txt`
+
+
+** Complete Pipeline **
+  linkedin_urls.json
+        │
+        ▼
+  login_use.py
+        │
+        ▼
+storage_state.json
+        │
+        ▼
+filter_education.py
+        │
+        ▼
+education_extracted.txt
+        │
+        ▼
+filter_prompt.txt
+        │
+        ▼
+    main.py
+        │
+        ▼
+     Gemini
+        │
+        ├───────────────► filter_results.txt
+        │                 (Filtering explanations)
+        │
+        ▼
+selected_urls.json
+(Filtered LinkedIn URLs)
+        │
+        ▼
+scraper_authenticated.py
+        │
+        ▼
+linkedin_profile_data.txt
+        │
+        ▼
+extraction_prompt.txt
+        │
+        ▼
+Required Data Extraction
+        │
+        ▼
+extracted_profiles.txt
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ## 🚀 Getting Started
 
 ### Prerequisites
 
 - Python 3.10+
-- Node.js (if running headless browser proxies)
-- Tesseract OCR (if processing image-based scanned resumes locally)
 - Supabase Account & Database instance
 
 ### 1. Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/your-org/candidate-scraper-pipeline.git
-cd candidate-scraper-pipeline
-
-# Create and activate virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
@@ -170,10 +289,6 @@ Create a `.env` file in the project root:
 # LLM Provider
 OPENAI_API_KEY=your_openai_api_key
 
-# Supabase Configuration
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_KEY=your_supabase_anon_or_service_role_key
-
 # Scraper Credentials / Proxies (If Applicable)
 PROXY_SERVER=http://your-proxy-provider.com:8080
 PROXY_USERNAME=your_username
@@ -182,67 +297,14 @@ PROXY_PASSWORD=your_password
 
 ### 3. Usage
 
-Run the pipeline by passing candidate metadata:
+Run the pipeline :
 
-```bash
-python main.py --name "John Doe" --role "Senior Software Engineer" --company "Tech Corp"
-```
+--bash 
+  python master.py
 
-To run a batch job from an input file:
+    
 
-```bash
-python batch_runner.py --input candidates.json --output-dir ./exports
-```
 
----
-
-## ⚙️ Configuration
-
-You can customize agent behavior in `config/agent_config.yaml`:
-
-```yaml
-pipeline:
-  max_retries: 3
-  enable_portfolio_scraping: true
-
-agents:
-  scraper_agent:
-    timeout_seconds: 30
-    headless: true
-
-  resume_sub_agent:
-    ocr_engine: "tesseract"          # options: tesseract, vision_llm
-    supported_formats: ["pdf", "docx", "doc", "png", "jpg"]
-
-  validation_agent:
-    strict_mode: false               # Set true to fail pipeline if nulls persist after all retries
-```
-
----
-
-## 🗄 Database Schema (Supabase)
-
-The pipeline maps extracted candidate data to a standard `candidates` table in Supabase:
-
-```sql
-CREATE TABLE candidates (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    full_name TEXT NOT NULL,
-    current_role TEXT,
-    company TEXT,
-    email TEXT UNIQUE,
-    phone TEXT,
-    linkedin_url TEXT,
-    portfolio_url TEXT,
-    skills TEXT[],
-    experience JSONB,
-    education JSONB,
-    source_completeness NUMERIC,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-```
-
----
 
 ## ⚠️ Troubleshooting & Known Challenges
 
